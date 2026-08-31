@@ -1,0 +1,61 @@
+name: Deploy to Render
+
+# Render auto-deploys from the connected GitHub branch by default, but this
+# workflow lets you (a) validate the build before it ships and (b) trigger a
+# deploy explicitly via Render's Deploy Hook, which is useful if auto-deploy
+# is disabled on the Render service.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: 'build-placeholder'
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: 'build-placeholder'
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'build-placeholder'
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: 'build-placeholder'
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 'build-placeholder'
+          NEXT_PUBLIC_FIREBASE_APP_ID: 'build-placeholder'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret not set - skipping explicit deploy hook trigger."
+            echo "Render's built-in auto-deploy (from render.yaml) will still deploy this push."
+            exit 0
+          fi
+          curl -fsSL -X POST "$RENDER_DEPLOY_HOOK_URL"
