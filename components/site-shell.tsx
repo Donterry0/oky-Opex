@@ -28,6 +28,8 @@ export async function Header() {
           <Link href="/markets" className="transition hover:text-white">Markets</Link>
           <Link href="/dashboard" className="transition hover:text-white">Dashboard</Link>
           <Link href="/portfolio" className="transition hover:text-white">Portfolio</Link>
+          <Link href="/about" className="transition hover:text-white">About</Link>
+          <Link href="/contact" className="transition hover:text-white">Contact</Link>
           <Link href="/support" className="transition hover:text-white">Support</Link>
           {user?.role === 'ADMIN' ? <Link href="/admin" className="transition hover:text-white">Admin</Link> : null}
         </nav>
@@ -136,6 +138,8 @@ export function Footer() {
       <div className="container-shell flex flex-col gap-4 py-6 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
         <div>© 2026 OKY • Simulated trading environment</div>
         <div className="flex items-center gap-4">
+          <Link href="/about" className="transition hover:text-white">About</Link>
+          <Link href="/contact" className="transition hover:text-white">Contact</Link>
           <Link href="/privacy" className="transition hover:text-white">Privacy</Link>
           <Link href="/terms" className="transition hover:text-white">Terms</Link>
           <Link href="/support" className="transition hover:text-white">Support</Link>

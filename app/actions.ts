@@ -15,6 +15,15 @@ import {
 } from '@/lib/auth';
 import { getAssetBySymbol } from '@/lib/market';
 import { findUserByEmail, createUser, recordUserLogin } from '@/lib/demo-db';
+import { createInquiry, updateInquiryStatus, deleteInquiry } from '@/lib/inquiries';
+
+const inquirySchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  subject: z.string().min(2),
+  message: z.string().min(10),
+});
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -436,4 +445,149 @@ export async function updateWithdrawalStatusAction(formData: FormData) {
   });
 
   redirect('/admin/withdrawals?status=updated');
+}
+
+export async function submitDepositAction(formData: FormData) {
+  const user = await getSessionUser();
+  if (!user) redirect('/login');
+
+  const asset = String(formData.get('asset') ?? '');
+  const amount = Number(formData.get('amount') ?? 0);
+  const walletAddress = String(formData.get('walletAddress') ?? '');
+  const txReference = String(formData.get('txReference') ?? '') || undefined;
+
+  if (!asset || amount <= 0 || !walletAddress) {
+    redirect('/deposit?error=invalid-deposit');
+  }
+
+  await prisma.deposit.create({
+    data: {
+      userId: user.id,
+      assetSymbol: asset.toUpperCase(),
+      amount,
+      walletAddress,
+      txReference,
+      status: 'PENDING',
+    },
+  });
+
+  await prisma.transaction.create({
+    data: {
+      userId: user.id,
+      type: 'DEPOSIT',
+      asset: asset.toUpperCase(),
+      amount,
+      status: 'PENDING',
+      description: 'Crypto wallet deposit submitted and awaiting administrator review.',
+    },
+  });
+
+  redirect('/deposit?status=submitted');
+}
+
+export async function updateDepositStatusAction(formData: FormData) {
+  const currentUser = await getSessionUser();
+  if (!currentUser || currentUser.role !== 'ADMIN') redirect('/dashboard');
+
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '');
+  const nextStatus = status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+
+  const deposit = await prisma.deposit.findUnique({ where: { id } });
+  if (!deposit) redirect('/admin/deposits?error=deposit-not-found');
+  if (deposit.status !== 'PENDING') redirect('/admin/deposits?error=deposit-already-reviewed');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.deposit.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        reviewedBy: currentUser.id,
+        reviewedAt: new Date(),
+      },
+    });
+
+    if (nextStatus === 'APPROVED') {
+      const balance = await tx.demoBalance.findUnique({ where: { userId: deposit.userId } });
+      const next = Number(balance?.amount ?? 0) + deposit.amount;
+
+      await tx.demoBalance.upsert({
+        where: { userId: deposit.userId },
+        update: { amount: next },
+        create: { userId: deposit.userId, amount: next, currency: 'USD' },
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: deposit.userId,
+          type: 'DEPOSIT',
+          asset: deposit.assetSymbol,
+          amount: deposit.amount,
+          status: 'COMPLETED',
+          description: `Crypto wallet deposit of ${deposit.amount} ${deposit.assetSymbol} approved and credited to balance.`,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: deposit.userId,
+          actorId: currentUser.id,
+          action: 'DEPOSIT_APPROVED',
+          details: `Approved deposit of ${deposit.amount} ${deposit.assetSymbol} from wallet ${deposit.walletAddress}.`,
+        },
+      });
+    } else {
+      await tx.transaction.create({
+        data: {
+          userId: deposit.userId,
+          type: 'DEPOSIT',
+          asset: deposit.assetSymbol,
+          amount: deposit.amount,
+          status: 'REJECTED',
+          description: `Crypto wallet deposit of ${deposit.amount} ${deposit.assetSymbol} was rejected.`,
+        },
+      });
+    }
+  });
+
+  revalidatePath('/admin/deposits');
+  revalidatePath('/wallet');
+  redirect('/admin/deposits?status=updated');
+}
+
+export async function submitInquiryAction(formData: FormData) {
+  const payload = inquirySchema.parse({
+    name: String(formData.get('name') ?? ''),
+    email: String(formData.get('email') ?? ''),
+    phone: String(formData.get('phone') ?? '') || undefined,
+    subject: String(formData.get('subject') ?? ''),
+    message: String(formData.get('message') ?? ''),
+  });
+
+  await createInquiry(payload);
+
+  redirect('/contact?status=sent');
+}
+
+export async function updateInquiryStatusAction(formData: FormData) {
+  const currentUser = await getSessionUser();
+  if (!currentUser || currentUser.role !== 'ADMIN') redirect('/dashboard');
+
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '');
+
+  await updateInquiryStatus(id, status);
+  revalidatePath('/admin/inquiries');
+  redirect('/admin/inquiries?status=updated');
+}
+
+export async function deleteInquiryAction(formData: FormData) {
+  const currentUser = await getSessionUser();
+  if (!currentUser || currentUser.role !== 'ADMIN') redirect('/dashboard');
+
+  const id = String(formData.get('id') ?? '');
+
+  await deleteInquiry(id);
+  revalidatePath('/admin/inquiries');
+  redirect('/admin/inquiries?status=deleted');
 }

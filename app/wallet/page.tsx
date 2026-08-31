@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AppLayout, PageHeader } from '@/components/site-shell';
 import { getSessionUser } from '@/lib/auth';
@@ -16,7 +17,16 @@ export default async function WalletPage() {
 
   return (
     <AppLayout>
-      <PageHeader title="Wallet" description="Simulated cash balance, crypto holdings, and transaction history." />
+      <PageHeader
+        title="Wallet"
+        description="Simulated cash balance, crypto holdings, and transaction history."
+        action={
+          <div className="flex gap-3">
+            <Link href="/deposit" className="btn-primary">Deposit from wallet</Link>
+            <Link href="/withdraw" className="btn-secondary">Withdraw</Link>
+          </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="panel p-5">
