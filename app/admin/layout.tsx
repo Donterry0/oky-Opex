@@ -12,7 +12,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ['Balance Management', '/admin/balances'],
           ['Transactions', '/admin/transactions'],
           ['Withdrawals', '/admin/withdrawals'],
+          ['Deposits', '/admin/deposits'],
           ['Assets', '/admin/assets'],
+          ['Inquiries', '/admin/inquiries'],
           ['Settings', '/admin/settings'],
           ['Audit Logs', '/admin/audit'],
         ].map(([label, href]) => (
