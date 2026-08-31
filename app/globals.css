@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+  background-image: radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 35%), #020817;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100%;
+}
+
+input, select, textarea, button {
+  font: inherit;
+}
+
+input, textarea, select {
+  @apply transition duration-150 ease-out focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20;
+}
+
+@layer components {
+  .container-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-slate-800 bg-slate-900/80 shadow-glow;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-sky-500 px-4 py-2.5 font-medium text-slate-950 transition hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 font-medium text-slate-100 transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20;
+  }
+
+  .label-chip {
+    @apply inline-flex items-center rounded-full border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-200;
+  }
+
+  .demo-banner {
+    @apply border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.22em] text-amber-200;
+  }
+}
+
+.shadow-glow {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 18px 40px rgba(14, 165, 233, 0.08);
+}

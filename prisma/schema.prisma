@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String            @id @default(cuid())
+  email              String            @unique
+  passwordHash       String
+  name               String?
+  role               String            @default("USER")
+  status             String            @default("ACTIVE")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  lastLogin          DateTime?
+  emailVerifiedAt    DateTime?
+  withdrawalPinHash  String?
+  withdrawalPinFailedAttempts Int @default(0)
+  withdrawalPinLastFailedAt DateTime?
+  kycStatus          String            @default("NOT_STARTED")
+
+  profile            Profile?
+  sessions           Session[]
+  watchlist          Watchlist[]
+  holdings           Holding[]
+  transactions       Transaction[]
+  demoBalance        DemoBalance?
+  balanceAdjustments BalanceAdjustment[]
+  withdrawals        Withdrawal[]
+  auditLogs          AuditLog[]
+  kycSubmissions     KYCSubmission[]
+  orders             SimulatedOrder[]
+  trades             SimulatedTrade[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  lastSeen  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  fullName    String?
+  dob         String?
+  country     String?
+  address     String?
+  documentType String?
+  documentUrl String?
+  selfieUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KYCSubmission {
+  id          String        @id @default(cuid())
+  userId      String
+  fullName    String
+  dob         String
+  country     String
+  address     String
+  documentType String
+  documentUrl String?
+  selfieUrl   String?
+  status      String        @default("PENDING")
+  reviewNotes String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  symbol      String   @unique
+  name        String
+  priceUsd    Float?
+  marketCap   Float?
+  volume24h   Float?
+  dayHigh     Float?
+  dayLow      Float?
+  change24h   Float?
+  updatedAt   DateTime @updatedAt
+}
+
+model Watchlist {
+  id          String   @id @default(cuid())
+  userId      String
+  assetSymbol String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetSymbol])
+}
+
+model DemoBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  amount    Float    @default(0)
+  currency  String   @default("USD")
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BalanceAdjustment {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String?
+  amount    Float
+  reason    String
+  type      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Holding {
+  id          String   @id @default(cuid())
+  userId      String
+  assetSymbol String
+  quantity    Float    @default(0)
+  averagePrice Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetSymbol])
+}
+
+model SimulatedOrder {
+  id          String   @id @default(cuid())
+  userId      String
+  assetSymbol String
+  side        String
+  type        String
+  quantity    Float
+  price       Float?
+  total       Float
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SimulatedTrade {
+  id          String   @id @default(cuid())
+  userId      String
+  assetSymbol String
+  side        String
+  quantity    Float
+  price       Float
+  total       Float
+  status      String   @default("SIMULATED")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Withdrawal {
+  id               String            @id @default(cuid())
+  userId           String
+  assetSymbol      String
+  amount           Float
+  destination      String
+  status           String            @default("PENDING")
+  requestedAt      DateTime          @default(now())
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  pinVerified      Boolean           @default(false)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  asset       String?
+  amount      Float
+  status      String
+  description String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  actorId   String?
+  action    String
+  details   String
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id            String   @id @default(cuid())
+  supportEmail  String   @default("support@oky.local")
+  supportPhone  String   @default("+1 (555) 010-2450")
+  supportHours  String   @default("Mon-Fri 9:00 AM - 6:00 PM UTC")
+  supportAddress String  @default("OKY Support Desk, 100 Test Street, Suite 200, London")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
